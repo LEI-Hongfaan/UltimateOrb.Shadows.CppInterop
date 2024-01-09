@@ -1,0 +1,92 @@
+﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+
+<#
+var records = new (int CharBitSize, int PlatfromBitwidth, string PrimtiveCharType)[] {
+    (8, 64, "sbyte"),
+    (16, 64, "char"),
+    (32, 64, "UInt32"),
+    (8, 32, "sbyte"),
+    (16, 32, "char"),
+    (32, 32, "UInt32"),
+};
+#>
+namespace UltimateOrb.Shadows.CppInterop {
+
+    namespace LLVM {
+<#
+foreach (var record in records) {
+#>
+        
+        public struct Char<#= record.CharBitSize #>ResidentStringRecord_<#= record.PlatfromBitwidth #><IsStringLayoutAlternativeT, TChar>
+            where IsStringLayoutAlternativeT : struct, IConstantDataType<bool, IsStringLayoutAlternativeTag>
+            where TChar : unmanaged {
+
+            private const int __SizeOfTChar = sizeof(<#= record.PrimtiveCharType #>);
+
+#if DEBUG
+            static Char<#= record.CharBitSize #>ResidentStringRecord_<#= record.PlatfromBitwidth #>() {
+                Debug.Assert(__SizeOfTChar == Unsafe.SizeOf<TChar>());
+            }
+#endif
+
+            internal const nuint BufferElementCount = (NonResidentStringRecord_<#= record.PlatfromBitwidth #><IsStringLayoutAlternativeT, TChar>.__StructureSize - 1) / __SizeOfTChar > 2 ? (NonResidentStringRecord_<#= record.PlatfromBitwidth #><IsStringLayoutAlternativeT, TChar>.__StructureSize - 1) / __SizeOfTChar : 2;
+
+            ref Char<#= record.CharBitSize #>ResidentStringRecord_<#= record.PlatfromBitwidth #><IsStringLayoutAlternativeT, TChar> DangerousGetReference() {
+                unsafe {
+                    return ref Unsafe.AsRef<Char<#= record.CharBitSize #>ResidentStringRecord_<#= record.PlatfromBitwidth #><IsStringLayoutAlternativeT, TChar>>(Unsafe.AsPointer(ref this));
+                }
+            }
+
+            private const int __BufferElementSize = checked((int)(1 + BufferElementCount));
+
+            unsafe fixed <#= record.PrimtiveCharType #> __Data_[__BufferElementSize];
+
+            internal const int __StructureSize = __SizeOfTChar * __BufferElementSize;
+
+            public unsafe TChar* __Data {
+
+                [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+                get {
+                    unsafe {
+                        return (TChar*)Unsafe.AsPointer(ref new IsStringLayoutAlternativeT().Value ? ref __Data_[0] : ref __Data_[1]);
+                    }
+                }
+            }
+
+            /*
+            public ref TChar Data {
+
+                get {
+                    unsafe {
+                        return ref *__Data;
+                    }
+                }
+            }
+            */
+
+            public ref TChar this[nint offset] {
+
+                get {
+                    Debug.Assert(checked((nint)BufferElementCount) > offset);
+                    unsafe {
+                        return ref __Data[offset];
+                    }
+                }
+            }
+
+            public ref byte Size {
+
+                get {
+                    unsafe {
+                        return ref Unsafe.As<<#= record.PrimtiveCharType #>, Char<#= record.CharBitSize #>ResidentStringRecordPaddedSize<IsStringLayoutAlternativeT>>(ref new IsStringLayoutAlternativeT().Value ? ref __Data_[unchecked((int)BufferElementCount)] : ref __Data_[0])._Size;
+                    }
+                }
+            }
+        }
+<#
+}
+#>
+    }
+}
