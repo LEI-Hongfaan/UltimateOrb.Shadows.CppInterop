@@ -1,0 +1,100 @@
+﻿using System.Runtime.CompilerServices;
+using UltimateOrb.Shadows.CppInterop.Shared;
+
+<#
+var records = new (int CharBitSize, int PlatfromBitwidth, bool IsAllocatorEmpty)[] {
+    (8, 64, true),
+    (16, 64, true),
+    (32, 64, true),
+    (8, 32, true),
+    (16, 32, true),
+    (32, 32, true),
+    (8, 64, false),
+    (16, 64, false),
+    (32, 64, false),
+    (8, 32, false),
+    (16, 32, false),
+    (32, 32, false),
+};
+#>
+namespace UltimateOrb.Shadows.CppInterop {
+
+    namespace LLVM {
+<#
+foreach (var record in records) {
+    var IsAllocatorEmpty = record.IsAllocatorEmpty ? 1 : 0;
+#>
+
+        public struct Char<#= record.CharBitSize #>StringBase_<#= record.PlatfromBitwidth #>_<#= IsAllocatorEmpty #><LibCppOptionsT, TChar, Traits, TAllocator>
+            where LibCppOptionsT : struct, ILibCppOptions
+            where TChar : unmanaged
+            where Traits : struct
+            where TAllocator : unmanaged, IAllocator<TChar> {
+
+            CompressedPair_0_<#= IsAllocatorEmpty #><Char<#= record.CharBitSize #>StringRecord_<#= record.PlatfromBitwidth #><LibCppOptionsT, TChar>, TAllocator> _Representation;
+
+            static LibCppOptionsT LibCppOptions {
+
+                get => new();
+            }
+
+            static readonly nuint __ResidentRecordMask = (nuint)(LibCppOptions.IsStringLayoutAlternative == LibCppOptions.IsBigEndian ? 1 : 0x80);
+
+            static readonly nuint __NonResidentRecordMask = (nuint)(LibCppOptions.IsStringLayoutAlternative == LibCppOptions.IsBigEndian ? 1 : ~(~(nuint)0 >> 1));
+
+            internal bool _IsNonResident {
+
+                get {
+                    return 0 != (_Representation.First._ResidentRecord.Size & __ResidentRecordMask);
+                }
+            }
+
+            public nuint Capacity {
+
+                get => _IsNonResident ? Char<#= record.CharBitSize #>ResidentStringRecord_<#= record.PlatfromBitwidth #><LibCppOptionsT, TChar>.BufferElementCount : _Representation.First._NonResidentRecord.Capacity;
+            }
+
+            public nuint Size {
+
+                get => _IsNonResident ? _Representation.First._NonResidentRecord.Size : (LibCppOptions.IsStringLayoutAlternative == LibCppOptions.IsBigEndian ? (uint)_Representation.First._ResidentRecord.Size >> 1 : _Representation.First._ResidentRecord.Size);
+
+                internal set {
+                    if (_IsNonResident) {
+                        _Representation.First._NonResidentRecord.Size = value;
+                    } else {
+                        if (LibCppOptions.IsStringLayoutAlternative == LibCppOptions.IsBigEndian) {
+                            _Representation.First._ResidentRecord.Size = unchecked((byte)(value << 1));
+                        } else {
+                            _Representation.First._ResidentRecord.Size = unchecked((byte)value);
+                        }
+                    }
+                }
+            }
+
+            public unsafe TChar* Pointer {
+
+                get => _IsNonResident ? _Representation.First._NonResidentRecord.Data : _Representation.First._ResidentRecord.__Data;
+            }
+
+            public Span<TChar> Span {
+
+                get {
+                    unsafe {
+                        return new Span<TChar>(Pointer, checked((int)Size));
+                    }
+                }
+            }
+
+            public void Dispose() {
+                if (_IsNonResident) {
+                    unsafe {
+                        _Representation.Second.Deallocate(_Representation.First._NonResidentRecord.Data, _Representation.First._NonResidentRecord.Capacity);
+                    }
+                }
+            }
+        }
+<#
+}
+#>
+    }
+}

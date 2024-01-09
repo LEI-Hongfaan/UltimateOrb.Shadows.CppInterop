@@ -1,0 +1,39 @@
+﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+
+<#
+var records = new (int CharBitSize, int PlatfromBitwidth, string PrimtiveCharType)[] {
+    (8, 64, "sbyte"),
+    (16, 64, "char"),
+    (32, 64, "UInt32"),
+};
+#>
+namespace UltimateOrb.Shadows.CppInterop {
+
+    namespace LLVM {
+<#
+foreach (var record in records) {
+#>
+        
+        struct Char<#= record.CharBitSize #>ResidentStringRecordPaddedSize<IsStringLayoutAlternativeT>
+            where IsStringLayoutAlternativeT : struct, IConstantDataType<bool, IsStringLayoutAlternativeTag> {
+            
+            unsafe fixed <#= record.PrimtiveCharType #> p[1];
+            
+#pragma warning disable IDE1006 // Naming Styles
+            internal ref byte _Size {
+#pragma warning restore IDE1006 // Naming Styles
+                
+                get {
+                    unsafe {
+                        return ref new IsStringLayoutAlternativeT().Value ? ref Unsafe.As<<#= record.PrimtiveCharType #>, byte>(ref p[0]) : ref Unsafe.Subtract(ref Unsafe.As<<#= record.PrimtiveCharType #>, byte>(ref p[1]), 1);
+                    }
+                }
+            }
+        }
+<#
+}
+#>
+    }
+}
