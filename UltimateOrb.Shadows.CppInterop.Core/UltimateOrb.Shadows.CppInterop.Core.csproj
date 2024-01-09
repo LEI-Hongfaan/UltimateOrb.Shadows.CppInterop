@@ -16,5 +16,8 @@
 		<Copyright>Copyright 2023 LEI Hongfaan.</Copyright>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
-
+	
+	<ItemGroup>
+		<None Include="README.md" Pack="true" PackagePath="" />
+	</ItemGroup>
 </Project>

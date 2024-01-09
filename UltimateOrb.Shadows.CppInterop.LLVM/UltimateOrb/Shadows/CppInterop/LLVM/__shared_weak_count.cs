@@ -27,7 +27,7 @@ namespace UltimateOrb.Shadows.CppInterop {
             }
 
             internal void __release_weak() {
-                if (CLongInterlocked.Read(ref __shared_weak_owners_).Value == 0) {
+                if (CLongVolatile.Read(ref __shared_weak_owners_).Value == 0) {
                     __on_zero_shared_weak();
                 } else if (CLongInterlocked.Decrement(ref __shared_weak_owners_).Value == -1) {
                     __on_zero_shared_weak();
